@@ -1,0 +1,40 @@
+name: Kernel Build
+
+on:
+  push:
+    branches:
+      - nethunter-build
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      ARCH: arm64
+      CROSS_COMPILE: aarch64-linux-gnu-
+      KERNEL_DEFCONFIG: omni_sunny_defconfig
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Setup cross-compiler
+      run: |
+        sudo apt update
+        sudo apt install -y gcc-aarch64-linux-gnu bc build-essential flex bison libncurses5-dev libssl-dev
+
+    - name: Apply NetHunter patch
+      run: git apply nethunter_patch.patch
+
+    - name: Prepare kernel
+      run: make O=out $KERNEL_DEFCONFIG
+
+    - name: Compile kernel
+      run: make -j$(nproc) O=out
+
+    - name: Upload kernel
+      uses: actions/upload-artifact@v3
+      with:
+        name: kernel-image
+        path: out/arch/arm64/boot/Image.gz-dtb
